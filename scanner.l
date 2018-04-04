@@ -1,3 +1,4 @@
+%option noinput nounput
 %{
 #include <stdio.h>
 #include <string.h>
