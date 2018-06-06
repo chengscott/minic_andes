@@ -24,6 +24,7 @@ Integer [1-9][0-9]*|0
 Double (([0-9]*"."[0-9]+)|([0-9]+"."[0-9]*))
 Sci ({Integer}|{Double})[Ee][+-]?{Integer}
 Char '(\\.|[^\n\'])?'
+String \"[^\n\"]*\"
 Identifier [a-zA-Z_][a-zA-Z_0-9]*
 Punctuation ":"|";"|","|"."|"\["|"\]"|"\("|"\)"|"\{"|"\}"
 Operator "+"|"-"|"*"|"/"|"%"|"="|"!"
@@ -65,6 +66,7 @@ PragmaTokenOff "#pragma"{S}"token"{S}"off"
 {Integer} { return print_token("integer", INTEGER); }
 {Double}|{Sci} { return print_token("double", DOUBLE); }
 {Char} { return print_token("char", CHAR); }
+{String} { return print_token("string", STRING); }
 
 {S} { pos += yyleng; }
 

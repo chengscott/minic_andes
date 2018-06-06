@@ -15,21 +15,15 @@ int has_entry_function = 0, nofunc = 0;
 
 %start program
 %union {
-  struct Num {
-    char type;
-    union {
-      int ival;
-      double dval;
-    };
-  } nval;
+  double dval;
   char cval;
   char *id;
 }
 
 /* all identifiers that are not reserved words
    and are not declared typedefs in the current block */
-%token <id> IDENTIFIER
-%token <nval> INTEGER BOOL DOUBLE
+%token <id> IDENTIFIER STRING
+%token <dval> INTEGER BOOL DOUBLE
 %token <cval> CHAR
 
 /* reserved words that specify storage class.
@@ -46,7 +40,7 @@ int has_entry_function = 0, nofunc = 0;
 
 %type <id> notype_declarator notype_array IDENTIFIER primary expr_no_commas
 
-%type <nval> CONSTANT
+%type <dval> CONSTANT
 
 /* Define the operator tokens and their precedences.
    The value is an integer because, if used, it is the tree code
@@ -55,20 +49,21 @@ int has_entry_function = 0, nofunc = 0;
 %left IDENTIFIER SCSPEC TYPESPEC TYPEMOD
 %left ','
 %right '='
-%left <nval> OROR
-%left <nval> ANDAND
-%right <nval> '!'
-%left <nval> ARITHCOMPARE EQCOMPARE NEQCOMPARE
-%left <nval> '+' '-'
-%left <nval> '*' '/' '%'
-%right <nval> UNARY
-%left <nval> PLUSPLUS MINUSMINUS
+%left <dval> OROR
+%left <dval> ANDAND
+%right <dval> '!'
+%left <dval> ARITHCOMPARE EQCOMPARE NEQCOMPARE
+%left <dval> '+' '-'
+%left <dval> '*' '/' '%'
+%right <dval> UNARY
+%left <dval> PLUSPLUS MINUSMINUS
 %left '.' '(' '['
 
 %%
 CONSTANT: INTEGER
         | DOUBLE
         | BOOL
+        | CHAR  { $$ = 0; }
         ;
 
 program: extdefs {
@@ -101,7 +96,7 @@ expr: expr_no_commas
 
 expr_no_commas: primary
               | IDENTIFIER '=' expr_no_commas
-              | IDENTIFIER '[' expr ']' '=' '{' xexpr '}'
+              | array '=' expr_no_commas { $$ = NULL; }
               | expr_no_commas OROR expr_no_commas
               | expr_no_commas ANDAND expr_no_commas
               | '!' expr_no_commas { $$ = $2; }
@@ -118,11 +113,10 @@ expr_no_commas: primary
 
 primary: IDENTIFIER
        | CONSTANT { $$ = NULL; }
-       | CHAR { $$ = NULL; }
        /* function invocation */
        | IDENTIFIER '(' { if (nofunc) yyerror(""); } xexpr ')'
        /* array invocation */
-       | IDENTIFIER '[' expr ']'
+       | array { $$ = NULL; }
        | primary PLUSPLUS
        | primary MINUSMINUS
        | '(' expr ')' { $$ = NULL; }
@@ -140,6 +134,11 @@ fdecs: notype_declarator ',' fdecs
 notype_array: IDENTIFIER '[' INTEGER ']'
             | notype_array '[' INTEGER ']'
             ;
+
+// array invocation
+array: IDENTIFIER '[' expr ']'
+     | array '[' expr ']'
+     ;
 
 // function parameter list declaration
 parmlist: /* empty */
@@ -182,13 +181,12 @@ else_stmtblk: ELSE stmtblk
 cases_blk: case_blk cases_blk
          ;
 
-case_blk: CASE CONSTANT ':' stmts
+case_blk: CASE INTEGER ':' stmts
         | CASE CHAR ':' stmts
         ;
 
 default_blk: /*empty*/
-           | DEFAULT_TOKEN CONSTANT ':' stmts
-           | DEFAULT_TOKEN CHAR ':' stmts
+           | DEFAULT_TOKEN ':' stmts
            ;
 
 // variable declaration
@@ -215,7 +213,6 @@ cdecs: cdec ',' cdecs
      ;
 
 cdec: IDENTIFIER '=' CONSTANT
-    | IDENTIFIER '=' CHAR
     ;
 %%
 
